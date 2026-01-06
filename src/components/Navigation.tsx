@@ -9,27 +9,27 @@ import {
   FileText,
   Settings,
   HelpCircle,
-  Mail,
-  Download,
   List,
   User,
+  Sparkles,
+  LogOut,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useAuth } from "@/context/AuthContext";
 
 const sidebarItems = [
   { icon: List, label: "Overview", href: "/" },
   { icon: Home, label: "Dashboard", href: "/dashboard" },
-  { icon: BarChart3, label: "Analytics", href: "/history" },
+  { icon: Sparkles, label: "Simulator", href: "/simulator" },
   { icon: FileText, label: "Reports", href: "/results" },
-  { icon: Download, label: "Export", href: "#" },
-  { icon: Mail, label: "Messages", href: "#" },
   { icon: Settings, label: "Settings", href: "#" },
   { icon: HelpCircle, label: "Help", href: "#" },
 ];
 
 export function Sidebar() {
   const pathname = usePathname();
+  const { user, logout } = useAuth();
 
   return (
     <aside className="w-24 h-screen bg-[#030712] border-r border-white/5 flex flex-col items-center py-8 fixed left-0 top-0 z-50">
@@ -66,10 +66,28 @@ export function Sidebar() {
         })}
       </nav>
 
-      <div className="mt-auto">
-        <button className="w-12 h-12 rounded-full bg-slate-800/50 flex items-center justify-center text-slate-400 hover:text-white transition-colors border border-white/5">
-          <User className="w-5 h-5" />
+      <div className="mt-auto flex flex-col gap-3 items-center">
+        {/* Logout Button */}
+        <button
+          onClick={logout}
+          className="w-12 h-12 rounded-full bg-red-500/10 flex items-center justify-center text-red-400 hover:bg-red-500/20 hover:text-red-300 transition-all group relative"
+        >
+          <LogOut className="w-5 h-5" />
+          <div className="absolute left-full ml-4 px-3 py-1 bg-slate-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap z-50 border border-white/10">
+            Logout
+          </div>
         </button>
+
+        {/* User Avatar */}
+        <div className="relative group">
+          <button className="w-12 h-12 rounded-full bg-gradient-to-r from-cyan-500 to-teal-500 flex items-center justify-center text-white font-bold text-sm border-2 border-white/10">
+            {user?.name?.charAt(0).toUpperCase() || "U"}
+          </button>
+          <div className="absolute left-full ml-4 px-3 py-2 bg-slate-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap z-50 border border-white/10">
+            <p className="font-medium">{user?.name || "User"}</p>
+            <p className="text-slate-400 text-[10px]">{user?.email}</p>
+          </div>
+        </div>
       </div>
     </aside>
   );

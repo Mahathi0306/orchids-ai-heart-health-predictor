@@ -3,7 +3,8 @@ import "./globals.css";
 import VisualEditsMessenger from "../visual-edits/VisualEditsMessenger";
 import ErrorReporter from "@/components/ErrorReporter";
 import Script from "next/script";
-import AppShell from "@/components/AppShell";
+import { AuthProvider } from "@/context/AuthContext";
+import { AuthenticatedLayout } from "@/components/AuthenticatedLayout";
 
 export const metadata: Metadata = {
   title: "CardioAI - Heart Disease Prediction",
@@ -35,7 +36,9 @@ export default function RootLayout({
           data-debug="true"
           data-custom-data='{"appName": "YourApp", "version": "1.0.0", "greeting": "hi"}'
         />
-        <AppShell>{children}</AppShell>
+        <AuthProvider>
+          <AuthenticatedLayout>{children}</AuthenticatedLayout>
+        </AuthProvider>
         <VisualEditsMessenger />
       </body>
     </html>

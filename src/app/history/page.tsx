@@ -10,8 +10,6 @@ import {
   FileText,
   Settings,
   HelpCircle,
-  Mail,
-  Download,
   List,
   TrendingDown,
   TrendingUp,
@@ -29,6 +27,8 @@ import {
   AreaChart,
   Area,
 } from "recharts";
+import { useReducedMotion } from "@/hooks/use-reduced-motion";
+import { VirtualizedList } from "@/components/performance";
 
 const riskHistoryData = [
   { date: "Jan 15", risk: 48 },
@@ -71,8 +71,6 @@ const sidebarItems = [
   { icon: Home, label: "Dashboard", href: "/dashboard" },
   { icon: BarChart3, label: "Analytics", href: "/history", active: true },
   { icon: FileText, label: "Reports", href: "/results" },
-  { icon: Download, label: "Export" },
-  { icon: Mail, label: "Messages" },
   { icon: Settings, label: "Settings" },
   { icon: HelpCircle, label: "Help" },
 ];
@@ -114,6 +112,20 @@ function DataPanel({
   className?: string;
   delay?: number;
 }) {
+  const prefersReducedMotion = useReducedMotion();
+  
+  if (prefersReducedMotion) {
+    return (
+      <div className={`bg-[#111827] border border-cyan-500/10 rounded-lg p-5 ${className}`}>
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-white font-medium text-sm">{title}</h3>
+          <ChevronRight className="w-4 h-4 text-slate-600" />
+        </div>
+        {children}
+      </div>
+    );
+  }
+  
   return (
     <motion.div
       initial={{ opacity: 0, y: 10 }}

@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { Header } from "@/components/Navigation";
+import { useReducedMotion } from "@/hooks/use-reduced-motion";
 
 const diseases = [
   {
@@ -191,32 +192,71 @@ function QuickStatsPanel() {
 }
 
 export default function ClinicalDashboard() {
+  const prefersReducedMotion = useReducedMotion();
+  
   return (
     <div className="min-h-screen">
       <Header title="HEALTH OVERVIEW" subtitle="Diagnostic Dashboard" />
       
       <main className="p-10">
         <div className="max-w-[1600px] mx-auto">
-          <motion.div 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.4 }}
-            className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6"
-          >
-            {diseases.map((disease) => (
-              <DiseasePanel key={disease.id} disease={disease} />
-            ))}
-            
-            <QuickStatsPanel />
-            
-            <div className="xl:col-span-1 bg-[#0f172a] border border-white/5 rounded-2xl p-6">
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="text-white font-bold text-sm uppercase tracking-widest">Recent Logs</h3>
-                <Link href="/history" className="text-[10px] font-bold text-cyan-400 uppercase tracking-widest hover:underline">
-                  Protocol History
-                </Link>
-              </div>
+          {prefersReducedMotion ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+              {diseases.map((disease) => (
+                <DiseasePanel key={disease.id} disease={disease} />
+              ))}
               
+              <QuickStatsPanel />
+              
+              <div className="xl:col-span-1 bg-[#0f172a] border border-white/5 rounded-2xl p-6">
+                <div className="flex items-center justify-between mb-6">
+                  <h3 className="text-white font-bold text-sm uppercase tracking-widest">Recent Logs</h3>
+                  <Link href="/history" className="text-[10px] font-bold text-cyan-400 uppercase tracking-widest hover:underline">
+                    Protocol History
+                  </Link>
+                </div>
+                
+                <div className="space-y-4">
+                  {[
+                    { action: "Cardiovascular profile synchronized", time: "08:42 AM", status: "cyan" },
+                    { action: "Hypertension baseline recalibrated", time: "Yesterday", status: "green" },
+                    { action: "System: New biometric data detected", time: "2 days ago", status: "slate" },
+                  ].map((item, i) => (
+                    <div key={i} className="flex items-center justify-between group">
+                      <div className="flex items-center gap-3">
+                        <div className={`w-1.5 h-1.5 rounded-full ${
+                          item.status === "cyan" ? "bg-cyan-400" : 
+                          item.status === "green" ? "bg-green-400" : "bg-slate-700"
+                        }`} />
+                        <span className="text-xs text-slate-400 group-hover:text-slate-200 transition-colors">{item.action}</span>
+                      </div>
+                      <span className="text-[10px] text-slate-600 font-mono">{item.time}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          ) : (
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.4 }}
+              className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6"
+            >
+              {diseases.map((disease) => (
+                <DiseasePanel key={disease.id} disease={disease} />
+              ))}
+              
+              <QuickStatsPanel />
+              
+              <div className="xl:col-span-1 bg-[#0f172a] border border-white/5 rounded-2xl p-6">
+                <div className="flex items-center justify-between mb-6">
+                  <h3 className="text-white font-bold text-sm uppercase tracking-widest">Recent Logs</h3>
+                  <Link href="/history" className="text-[10px] font-bold text-cyan-400 uppercase tracking-widest hover:underline">
+                    Protocol History
+                  </Link>
+                </div>
+                
               <div className="space-y-4">
                 {[
                   { action: "Cardiovascular profile synchronized", time: "08:42 AM", status: "cyan" },
@@ -237,6 +277,7 @@ export default function ClinicalDashboard() {
               </div>
             </div>
           </motion.div>
+          )}
           
           <footer className="mt-12 flex flex-col md:flex-row items-center justify-between border-t border-white/5 pt-8 gap-4">
             <div className="flex gap-6">

@@ -20,6 +20,7 @@ import {
   Bar,
 } from "recharts";
 import { Header } from "@/components/Navigation";
+import { useReducedMotion } from "@/hooks/use-reduced-motion";
 
 const riskData = [
   { year: "2018", risk: 3.2 },
@@ -47,6 +48,20 @@ function DataPanel({
   className?: string;
   delay?: number;
 }) {
+  const prefersReducedMotion = useReducedMotion();
+  
+  if (prefersReducedMotion) {
+    return (
+      <div className={`bg-[#0f172a] border border-white/5 rounded-2xl p-6 ${className}`}>
+        <div className="flex items-center justify-between mb-6">
+          <h3 className="text-white font-bold text-xs uppercase tracking-widest">{title}</h3>
+          <ChevronRight className="w-4 h-4 text-slate-600" />
+        </div>
+        {children}
+      </div>
+    );
+  }
+  
   return (
     <motion.div
       initial={{ opacity: 0, y: 10 }}

@@ -9,6 +9,10 @@ import {
   AlertCircle,
   CheckCircle,
   Info,
+  Calendar,
+  Target,
+  Sparkles,
+  ArrowRight,
 } from "lucide-react";
 import Link from "next/link";
 import { Suspense, useEffect, useState } from "react";
@@ -23,8 +27,12 @@ import {
   BarChart,
   Bar,
   Cell,
+  LineChart,
+  Line,
+  Legend,
 } from "recharts";
 import { Header } from "@/components/Navigation";
+import { useReducedMotion } from "@/hooks/use-reduced-motion";
 
 const trendData = [
   { month: "Jan", risk: 48 },
@@ -33,6 +41,26 @@ const trendData = [
   { month: "Apr", risk: 38 },
   { month: "May", risk: 36 },
   { month: "Jun", risk: 33 },
+];
+
+// Health Risk Forecast Data (6-month projection)
+const forecastData = [
+  { month: "Jul", current: 33, improved: 33, unchanged: 33 },
+  { month: "Aug", current: null, improved: 30, unchanged: 35 },
+  { month: "Sep", current: null, improved: 27, unchanged: 38 },
+  { month: "Oct", current: null, improved: 24, unchanged: 42 },
+  { month: "Nov", current: null, improved: 22, unchanged: 47 },
+  { month: "Dec", current: null, improved: 20, unchanged: 52 },
+];
+
+// Before vs After comparison data
+const beforeAfterData = [
+  { metric: "Heart Risk", before: 45, after: 33, unit: "%" },
+  { metric: "Diabetes Risk", before: 38, after: 28, unit: "%" },
+  { metric: "Sleep Quality", before: 5, after: 7, unit: "hrs" },
+  { metric: "Activity Level", before: 2000, after: 5500, unit: "steps" },
+  { metric: "Cholesterol", before: 230, after: 198, unit: "mg/dL" },
+  { metric: "Blood Pressure", before: 138, after: 118, unit: "mmHg" },
 ];
 
 const factorData = [
@@ -54,6 +82,20 @@ function DataPanel({
   className?: string;
   delay?: number;
 }) {
+  const prefersReducedMotion = useReducedMotion();
+  
+  if (prefersReducedMotion) {
+    return (
+      <div className={`bg-[#0f172a] border border-white/5 rounded-2xl p-6 ${className}`}>
+        <div className="flex items-center justify-between mb-6">
+          <h3 className="text-white font-bold text-xs uppercase tracking-widest">{title}</h3>
+          <ChevronRight className="w-4 h-4 text-slate-600" />
+        </div>
+        {children}
+      </div>
+    );
+  }
+  
   return (
     <motion.div
       initial={{ opacity: 0, y: 10 }}
@@ -270,6 +312,120 @@ function ResultsContent() {
                 </Link>
               </div>
             </DataPanel>
+
+            {/* Health Risk Forecast */}
+            <DataPanel title="6-Month Health Risk Forecast" className="col-span-full lg:col-span-8" delay={0.3}>
+              <div className="mb-4 flex items-center gap-6">
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-full bg-green-400" />
+                  <span className="text-xs text-slate-400">If habits improved</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-full bg-red-400" />
+                  <span className="text-xs text-slate-400">If unchanged</span>
+                </div>
+              </div>
+              <div className="h-64">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={forecastData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#1E293B" vertical={false} />
+                    <XAxis dataKey="month" stroke="#475569" fontSize={10} axisLine={false} tickLine={false} />
+                    <YAxis stroke="#475569" fontSize={10} axisLine={false} tickLine={false} domain={[0, 60]} />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: "#0f172a",
+                        border: "1px solid rgba(255,255,255,0.1)",
+                        borderRadius: "12px",
+                        fontSize: 11,
+                      }}
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="improved"
+                      name="With Improvements"
+                      stroke="#22c55e"
+                      strokeWidth={3}
+                      dot={{ fill: "#22c55e", r: 4 }}
+                      strokeDasharray="0"
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="unchanged"
+                      name="No Changes"
+                      stroke="#ef4444"
+                      strokeWidth={3}
+                      dot={{ fill: "#ef4444", r: 4 }}
+                      strokeDasharray="5 5"
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+              <div className="mt-4 p-4 bg-gradient-to-r from-green-500/10 to-teal-500/10 rounded-xl border border-green-500/20">
+                <div className="flex items-start gap-3">
+                  <Sparkles className="w-5 h-5 text-green-400 mt-0.5" />
+                  <div>
+                    <p className="text-white text-sm font-medium mb-1">Forecast Insight</p>
+                    <p className="text-slate-400 text-xs">
+                      With consistent habit improvements, your risk could drop to <span className="text-green-400 font-bold">20%</span> by December. 
+                      Without changes, it may rise to <span className="text-red-400 font-bold">52%</span>.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </DataPanel>
+
+            {/* Before vs After Comparison */}
+            <DataPanel title="Before vs After Comparison" className="col-span-full lg:col-span-4" delay={0.35}>
+              <p className="text-slate-500 text-xs mb-4">Your progress over the past 6 months</p>
+              <div className="space-y-4">
+                {beforeAfterData.map((item, i) => {
+                  const isImproved = item.metric.includes("Risk") || item.metric.includes("Cholesterol") || item.metric.includes("Pressure")
+                    ? item.after < item.before
+                    : item.after > item.before;
+                  const changePercent = Math.round(Math.abs(item.after - item.before) / item.before * 100);
+                  
+                  return (
+                    <div key={i} className="p-3 bg-slate-900/50 rounded-xl border border-white/5">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-xs text-slate-400">{item.metric}</span>
+                        <span className={`text-xs font-bold ${isImproved ? "text-green-400" : "text-red-400"}`}>
+                          {isImproved ? "↓" : "↑"} {changePercent}%
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <div className="flex-1">
+                          <div className="flex items-center justify-between text-xs mb-1">
+                            <span className="text-slate-500">Before</span>
+                            <span className="text-slate-300 font-mono">{item.before}{item.unit}</span>
+                          </div>
+                          <div className="h-2 bg-slate-800 rounded-full overflow-hidden">
+                            <div
+                              className="h-full bg-slate-600 rounded-full"
+                              style={{ width: `${Math.min((item.before / Math.max(item.before, item.after)) * 100, 100)}%` }}
+                            />
+                          </div>
+                        </div>
+                        <ArrowRight className="w-4 h-4 text-slate-600" />
+                        <div className="flex-1">
+                          <div className="flex items-center justify-between text-xs mb-1">
+                            <span className="text-slate-500">After</span>
+                            <span className={`font-mono font-bold ${isImproved ? "text-green-400" : "text-red-400"}`}>
+                              {item.after}{item.unit}
+                            </span>
+                          </div>
+                          <div className="h-2 bg-slate-800 rounded-full overflow-hidden">
+                            <div
+                              className={`h-full rounded-full ${isImproved ? "bg-green-500" : "bg-red-500"}`}
+                              style={{ width: `${Math.min((item.after / Math.max(item.before, item.after)) * 100, 100)}%` }}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </DataPanel>
           </div>
           
           <div className="mt-10 flex justify-center gap-6">
@@ -278,6 +434,13 @@ function ResultsContent() {
               className="h-12 px-8 bg-slate-900 border border-white/5 text-slate-400 font-bold uppercase tracking-widest text-[10px] rounded-xl hover:bg-slate-800 hover:text-white transition-all"
             >
               System Command
+            </Link>
+            <Link
+              href="/simulator"
+              className="h-12 px-8 bg-gradient-to-r from-cyan-500/10 to-teal-500/10 border border-cyan-500/20 text-cyan-400 font-bold uppercase tracking-widest text-[10px] rounded-xl hover:from-cyan-500/20 hover:to-teal-500/20 transition-all flex items-center gap-2"
+            >
+              <Sparkles className="w-4 h-4" />
+              Try Lifestyle Simulator
             </Link>
             <Link
               href="/assessment"
