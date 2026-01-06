@@ -5,8 +5,10 @@ import {
   TrendingUp,
   ChevronRight,
   Zap,
+  LogOut,
 } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import {
   XAxis,
@@ -112,6 +114,8 @@ function BodyHeatmap() {
 }
 
 export default function DashboardPage() {
+  const router = useRouter();
+  const [username, setUsername] = useState("");
   const [wearablesData, setWearablesData] = useState<{day: number, value: number}[]>([]);
 
   useEffect(() => {
@@ -119,11 +123,44 @@ export default function DashboardPage() {
       day: i + 1,
       value: 20 + Math.random() * 40,
     })));
+    const storedUsername = localStorage.getItem("username");
+    if (storedUsername) {
+      setUsername(storedUsername);
+    }
   }, []);
+
+  const handleLogout = () => {
+    localStorage.removeItem("username");
+    localStorage.removeItem("userEmail");
+    router.push("/login");
+  };
 
   return (
     <div className="min-h-screen">
-      <Header title="ANALYTICS COMMAND" subtitle="Advanced Heart Disease Dashboard" />
+      <div className="bg-[#0f172a] border-b border-white/5">
+        <div className="max-w-7xl mx-auto px-6 py-4">
+          <div className="flex justify-between items-center">
+            <div>
+              <h1 className="text-xl font-bold text-white uppercase tracking-widest">ANALYTICS COMMAND</h1>
+              <p className="text-xs text-slate-500 uppercase tracking-widest">Advanced Heart Disease Dashboard</p>
+            </div>
+            <div className="flex items-center gap-4">
+              {username && (
+                <span className="text-sm text-slate-400">
+                  Welcome, <span className="text-cyan-400 font-medium">{username}</span>
+                </span>
+              )}
+              <button
+                onClick={handleLogout}
+                className="flex items-center gap-2 px-4 py-2 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400 hover:bg-red-500/20 transition-all text-sm font-medium"
+              >
+                <LogOut className="w-4 h-4" />
+                Logout
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
       
       <main className="p-10">
         <div className="max-w-[1600px] mx-auto">
@@ -167,60 +204,6 @@ export default function DashboardPage() {
             
             <DataPanel title="Risk Heatmap" className="col-span-full md:col-span-6 xl:col-span-4" delay={0.05}>
               <BodyHeatmap />
-            </DataPanel>
-            
-            <DataPanel title="Disease Clusters" className="col-span-full md:col-span-6 xl:col-span-4" delay={0.1}>
-              <div className="h-48 flex items-center justify-center">
-                <svg viewBox="0 0 100 60" className="w-full h-full">
-                  <g className="opacity-80">
-                    <circle cx="25" cy="15" r="8" fill="#22D3EE" fillOpacity="0.2" stroke="#22D3EE" strokeWidth="0.5" />
-                    <circle cx="25" cy="15" r="2" fill="#22D3EE" />
-                    <text x="25" y="40" fill="#64748B" fontSize="3" fontWeight="bold" textAnchor="middle" className="uppercase tracking-widest">Joint Stiffness</text>
-                  </g>
-                  <g className="opacity-80">
-                    <circle cx="70" cy="12" r="7" fill="#8B5CF6" fillOpacity="0.2" stroke="#8B5CF6" strokeWidth="0.5" />
-                    <circle cx="70" cy="12" r="2" fill="#8B5CF6" />
-                    <text x="70" y="40" fill="#64748B" fontSize="3" fontWeight="bold" textAnchor="middle" className="uppercase tracking-widest">Polymyalgia</text>
-                  </g>
-                  <g className="opacity-80">
-                    <circle cx="50" cy="45" r="6" fill="#14B8A6" fillOpacity="0.2" stroke="#14B8A6" strokeWidth="0.5" />
-                    <circle cx="50" cy="45" r="2" fill="#14B8A6" />
-                    <text x="50" y="58" fill="#64748B" fontSize="3" fontWeight="bold" textAnchor="middle" className="uppercase tracking-widest">Erosive</text>
-                  </g>
-                </svg>
-              </div>
-            </DataPanel>
-            
-            <DataPanel title="Active Protocol" className="col-span-full md:col-span-6 xl:col-span-4" delay={0.15}>
-              <div className="space-y-6">
-                {medicationData.map((med) => (
-                  <div key={med.name} className="space-y-2">
-                    <div className="flex justify-between items-center">
-                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{med.name}</span>
-                      <span className="text-[10px] font-bold text-cyan-400 tracking-tighter">{med.current}%</span>
-                    </div>
-                    <div className="h-1.5 bg-slate-800 rounded-full overflow-hidden">
-                      <motion.div 
-                        initial={{ width: 0 }}
-                        animate={{ width: `${med.current}%` }}
-                        transition={{ duration: 1, delay: 0.5 }}
-                        className="h-full bg-cyan-400 rounded-full"
-                      />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </DataPanel>
-            
-            <DataPanel title="Telemetry Intake" className="col-span-full md:col-span-6 xl:col-span-4" delay={0.2}>
-              <div className="h-32">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={wearablesData}>
-                    <Bar dataKey="value" fill="#22D3EE" radius={[2, 2, 0, 0]} opacity={0.3} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-              <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-4 text-center">30-Day Biometric Stream</p>
             </DataPanel>
             
             <div className="col-span-full mt-6">

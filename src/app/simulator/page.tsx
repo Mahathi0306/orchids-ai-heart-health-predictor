@@ -1,536 +1,467 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import {
-  Heart,
-  Moon,
-  Cigarette,
-  Utensils,
-  Activity,
-  Brain,
-  Droplets,
-  ChevronRight,
-  Sparkles,
-  TrendingDown,
-  TrendingUp,
-  Zap,
-  Target,
-  ArrowRight,
-} from "lucide-react";
-import { Header } from "@/components/Navigation";
-import { PerformanceAwareMotion } from "@/components/performance";
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  Cell,
-} from "recharts";
+import { Heart, Wind, Droplets, Activity, Zap, LogOut, ArrowLeft, TrendingDown, TrendingUp, Minus, BarChart3 } from "lucide-react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
 
-// Types
-interface Habit {
-  id: string;
-  name: string;
-  icon: React.ElementType;
-  currentLevel: number; // 0-100
-  optimalLevel: number;
-  unit: string;
-  options: { label: string; value: number }[];
-  impactWeights: {
-    heart: number;
-    diabetes: number;
-    stroke: number;
-    thyroid: number;
-  };
+interface DiseaseAnswers {
+  [key: string]: string[];
 }
 
-interface RiskScore {
-  disease: string;
-  baseline: number;
-  simulated: number;
-  icon: React.ElementType;
-  color: string;
-}
-
-// Habit definitions with impact weights
-const habits: Habit[] = [
-  {
-    id: "sleep",
-    name: "Sleep Duration",
-    icon: Moon,
-    currentLevel: 40,
-    optimalLevel: 80,
-    unit: "hours",
-    options: [
-      { label: "< 5 hrs", value: 20 },
-      { label: "5-6 hrs", value: 40 },
-      { label: "6-7 hrs", value: 60 },
-      { label: "7-8 hrs", value: 80 },
-      { label: "8+ hrs", value: 100 },
+const diseases = {
+  heart: {
+    name: "Heart Disease",
+    icon: Heart,
+    color: "text-red-400",
+    bgColor: "bg-red-500/10",
+    barColor: "bg-red-500",
+    questions: [
+      { question: "How often do you exercise per week?", options: ["Never", "1-2 times", "3-4 times", "5+ times"] },
+      { question: "How often do you consume oily/fried food?", options: ["Daily", "Several times a week", "Once a week", "Rarely"] },
+      { question: "How many hours do you sleep daily?", options: ["Less than 5 hours", "5-6 hours", "7-8 hours", "More than 8 hours"] },
+      { question: "What is your stress level at work/home?", options: ["Very high", "High", "Moderate", "Low"] },
+      { question: "Do you smoke/consume alcohol?", options: ["Both regularly", "One regularly", "Occasionally", "Never"] },
     ],
-    impactWeights: { heart: 0.15, diabetes: 0.12, stroke: 0.18, thyroid: 0.25 },
   },
-  {
-    id: "sugar",
-    name: "Sugar Intake",
-    icon: Utensils,
-    currentLevel: 80,
-    optimalLevel: 20,
-    unit: "level",
-    options: [
-      { label: "Very High", value: 100 },
-      { label: "High", value: 80 },
-      { label: "Moderate", value: 50 },
-      { label: "Low", value: 20 },
-      { label: "Very Low", value: 0 },
+  lung: {
+    name: "Lung Disease",
+    icon: Wind,
+    color: "text-blue-400",
+    bgColor: "bg-blue-500/10",
+    barColor: "bg-blue-500",
+    questions: [
+      { question: "What is your smoking status?", options: ["Current smoker", "Former smoker", "Never smoked"] },
+      { question: "How is the air quality in your area?", options: ["Poor", "Fair", "Good", "Excellent"] },
+      { question: "Do you experience breathing difficulties?", options: ["Frequently", "Sometimes", "Rarely", "Never"] },
+      { question: "How active is your lifestyle?", options: ["Sedentary", "Lightly active", "Moderately active", "Very active"] },
+      { question: "Do you have any allergies or asthma?", options: ["Severe", "Moderate", "Mild", "None"] },
     ],
-    impactWeights: { heart: 0.12, diabetes: 0.35, stroke: 0.08, thyroid: 0.05 },
   },
-  {
-    id: "exercise",
-    name: "Physical Activity",
-    icon: Activity,
-    currentLevel: 30,
-    optimalLevel: 80,
-    unit: "mins/day",
-    options: [
-      { label: "Sedentary", value: 10 },
-      { label: "Light (15 min)", value: 30 },
-      { label: "Moderate (30 min)", value: 50 },
-      { label: "Active (45 min)", value: 70 },
-      { label: "Very Active (60+ min)", value: 90 },
-    ],
-    impactWeights: { heart: 0.25, diabetes: 0.20, stroke: 0.15, thyroid: 0.10 },
-  },
-  {
-    id: "smoking",
-    name: "Smoking Status",
-    icon: Cigarette,
-    currentLevel: 60,
-    optimalLevel: 0,
-    unit: "status",
-    options: [
-      { label: "Heavy Smoker", value: 100 },
-      { label: "Regular Smoker", value: 75 },
-      { label: "Occasional", value: 50 },
-      { label: "Former Smoker", value: 25 },
-      { label: "Never Smoked", value: 0 },
-    ],
-    impactWeights: { heart: 0.30, diabetes: 0.08, stroke: 0.25, thyroid: 0.15 },
-  },
-  {
-    id: "stress",
-    name: "Stress Level",
-    icon: Brain,
-    currentLevel: 70,
-    optimalLevel: 20,
-    unit: "level",
-    options: [
-      { label: "Very High", value: 100 },
-      { label: "High", value: 75 },
-      { label: "Moderate", value: 50 },
-      { label: "Low", value: 25 },
-      { label: "Very Low", value: 0 },
-    ],
-    impactWeights: { heart: 0.18, diabetes: 0.10, stroke: 0.20, thyroid: 0.30 },
-  },
-  {
-    id: "hydration",
-    name: "Water Intake",
+  diabetes: {
+    name: "Type 2 Diabetes",
     icon: Droplets,
-    currentLevel: 40,
-    optimalLevel: 90,
-    unit: "glasses/day",
-    options: [
-      { label: "< 4 glasses", value: 20 },
-      { label: "4-6 glasses", value: 40 },
-      { label: "6-8 glasses", value: 60 },
-      { label: "8-10 glasses", value: 80 },
-      { label: "10+ glasses", value: 100 },
+    color: "text-purple-400",
+    bgColor: "bg-purple-500/10",
+    barColor: "bg-purple-500",
+    questions: [
+      { question: "How often do you consume sugary foods/drinks?", options: ["Daily", "Several times a week", "Once a week", "Rarely"] },
+      { question: "What is your physical activity level?", options: ["Sedentary", "Lightly active", "Moderately active", "Very active"] },
+      { question: "How would you describe your body weight?", options: ["Obese", "Overweight", "Normal", "Underweight"] },
+      { question: "Do you have a family history of diabetes?", options: ["Yes, immediate family", "Yes, extended family", "No"] },
+      { question: "How often do you eat processed/junk food?", options: ["Daily", "Several times a week", "Once a week", "Rarely"] },
     ],
-    impactWeights: { heart: 0.05, diabetes: 0.08, stroke: 0.05, thyroid: 0.10 },
   },
-];
+  pcod: {
+    name: "PCOD/PCOS",
+    icon: Activity,
+    color: "text-pink-400",
+    bgColor: "bg-pink-500/10",
+    barColor: "bg-pink-500",
+    questions: [
+      { question: "How regular is your menstrual cycle?", options: ["Very irregular", "Somewhat irregular", "Mostly regular", "Always regular"] },
+      { question: "Do you experience acne or excess hair growth?", options: ["Both frequently", "One frequently", "Occasionally", "Never"] },
+      { question: "Have you experienced unexplained weight gain?", options: ["Significant", "Moderate", "Slight", "No"] },
+      { question: "What is your stress level?", options: ["Very high", "High", "Moderate", "Low"] },
+      { question: "Family history of PCOD/PCOS?", options: ["Yes, immediate family", "Yes, extended family", "No"] },
+    ],
+  },
+  thyroid: {
+    name: "Thyroid",
+    icon: Zap,
+    color: "text-yellow-400",
+    bgColor: "bg-yellow-500/10",
+    barColor: "bg-yellow-500",
+    questions: [
+      { question: "Do you experience unexplained fatigue?", options: ["Constantly", "Frequently", "Sometimes", "Never"] },
+      { question: "Have you noticed unexplained weight changes?", options: ["Significant changes", "Moderate changes", "Slight changes", "No changes"] },
+      { question: "Do you experience mood swings or depression?", options: ["Frequently", "Sometimes", "Rarely", "Never"] },
+      { question: "Are you sensitive to cold or heat?", options: ["Very sensitive to both", "Sensitive to one", "Slightly sensitive", "Not sensitive"] },
+      { question: "Family history of thyroid disorders?", options: ["Yes, immediate family", "Yes, extended family", "No"] },
+    ],
+  },
+};
 
-// Calculate risk score based on habits
-function calculateRisk(habitValues: Record<string, number>, disease: keyof Habit["impactWeights"]): number {
-  let riskScore = 0;
-  let totalWeight = 0;
-
-  habits.forEach((habit) => {
-    const value = habitValues[habit.id] ?? habit.currentLevel;
-    const weight = habit.impactWeights[disease];
-    
-    // For habits where lower is better (sugar, smoking, stress)
-    const isInverse = ["sugar", "smoking", "stress"].includes(habit.id);
-    const normalizedValue = isInverse ? value : 100 - value;
-    
-    riskScore += normalizedValue * weight;
-    totalWeight += weight;
+export default function SimulatorPage() {
+  const router = useRouter();
+  const [username, setUsername] = useState("");
+  const [answers, setAnswers] = useState<DiseaseAnswers>({
+    heart: ["", "", "", "", ""],
+    lung: ["", "", "", "", ""],
+    diabetes: ["", "", "", "", ""],
+    pcod: ["", "", "", "", ""],
+    thyroid: ["", "", "", "", ""],
+  });
+  
+  // Current risks (loaded from overview/localStorage)
+  const [currentRisks, setCurrentRisks] = useState({
+    heart: 0,
+    lung: 0,
+    diabetes: 0,
+    pcod: 0,
+    thyroid: 0,
   });
 
-  return Math.round((riskScore / totalWeight) * 0.6 + 15); // Scale to realistic range 15-75%
-}
+  // Simulated risks (calculated from lifestyle adjustments)
+  const [simulatedRisks, setSimulatedRisks] = useState({
+    heart: 0,
+    lung: 0,
+    diabetes: 0,
+    pcod: 0,
+    thyroid: 0,
+  });
 
-// Habit Priority Card
-function HabitPriorityCard({ 
-  habit, 
-  impact, 
-  rank 
-}: { 
-  habit: Habit; 
-  impact: number; 
-  rank: number;
-}) {
-  const Icon = habit.icon;
-  const isPositive = impact < 0;
-  
-  return (
-    <PerformanceAwareMotion
-      initial={{ opacity: 0, x: -20 }}
-      animate={{ opacity: 1, x: 0 }}
-      transition={{ delay: rank * 0.1 }}
-      className="flex items-center gap-4 p-4 bg-slate-800/30 rounded-xl border border-white/5 hover:border-cyan-500/20 transition-all"
-    >
-      <div className="flex items-center justify-center w-8 h-8 rounded-full bg-cyan-500/10 text-cyan-400 font-bold text-sm">
-        {rank}
-      </div>
-      <div className="w-10 h-10 rounded-lg bg-slate-700/50 flex items-center justify-center">
-        <Icon className="w-5 h-5 text-slate-400" />
-      </div>
-      <div className="flex-1">
-        <p className="text-white font-medium text-sm">{habit.name}</p>
-        <p className="text-slate-500 text-xs">Optimize this habit</p>
-      </div>
-      <div className={`flex items-center gap-1 px-3 py-1 rounded-full ${
-        isPositive ? "bg-green-500/10 text-green-400" : "bg-red-500/10 text-red-400"
-      }`}>
-        {isPositive ? <TrendingDown className="w-3 h-3" /> : <TrendingUp className="w-3 h-3" />}
-        <span className="text-xs font-bold">{Math.abs(impact)}%</span>
-      </div>
-    </PerformanceAwareMotion>
-  );
-}
+  const [hasAnalyzed, setHasAnalyzed] = useState(false);
 
-export default function LifestyleSimulatorPage() {
-  // State for habit values
-  const [habitValues, setHabitValues] = useState<Record<string, number>>(
-    Object.fromEntries(habits.map((h) => [h.id, h.currentLevel]))
-  );
-  const [simulatedValues, setSimulatedValues] = useState<Record<string, number>>(
-    Object.fromEntries(habits.map((h) => [h.id, h.currentLevel]))
-  );
-  const [activeHabit, setActiveHabit] = useState<string | null>(null);
+  useEffect(() => {
+    const storedUsername = localStorage.getItem("username");
+    if (storedUsername) {
+      setUsername(storedUsername);
+    }
+    
+    // Load current risks from localStorage (from Overview page)
+    const savedRisks = localStorage.getItem("diseaseRisks");
+    if (savedRisks) {
+      const parsedRisks = JSON.parse(savedRisks);
+      setCurrentRisks({
+        heart: parsedRisks.heart || 0,
+        lung: parsedRisks.lung || 0,
+        diabetes: parsedRisks.diabetes || 0,
+        pcod: parsedRisks.pcod || 0,
+        thyroid: parsedRisks.thyroid || 0,
+      });
+    }
+  }, []);
 
-  // Calculate risks
-  const riskScores: RiskScore[] = useMemo(() => [
-    {
-      disease: "Heart Disease",
-      baseline: calculateRisk(habitValues, "heart"),
-      simulated: calculateRisk(simulatedValues, "heart"),
-      icon: Heart,
-      color: "#ef4444",
-    },
-    {
-      disease: "Diabetes",
-      baseline: calculateRisk(habitValues, "diabetes"),
-      simulated: calculateRisk(simulatedValues, "diabetes"),
-      icon: Droplets,
-      color: "#f59e0b",
-    },
-    {
-      disease: "Stroke",
-      baseline: calculateRisk(habitValues, "stroke"),
-      simulated: calculateRisk(simulatedValues, "stroke"),
-      icon: Brain,
-      color: "#8b5cf6",
-    },
-    {
-      disease: "Thyroid",
-      baseline: calculateRisk(habitValues, "thyroid"),
-      simulated: calculateRisk(simulatedValues, "thyroid"),
-      icon: Activity,
-      color: "#06b6d4",
-    },
-  ], [habitValues, simulatedValues]);
+  const handleLogout = () => {
+    localStorage.removeItem("username");
+    localStorage.removeItem("userEmail");
+    router.push("/login");
+  };
 
-  // Calculate habit priorities (impact of optimizing each habit)
-  const habitPriorities = useMemo(() => {
-    return habits.map((habit) => {
-      // Simulate optimizing this habit
-      const optimizedValues = { ...habitValues, [habit.id]: habit.optimalLevel };
-      
-      // Calculate total risk reduction across all diseases
-      const currentTotal = riskScores.reduce((sum, r) => sum + r.baseline, 0);
-      const optimizedTotal = ["heart", "diabetes", "stroke", "thyroid"].reduce(
-        (sum, disease) => sum + calculateRisk(optimizedValues, disease as keyof Habit["impactWeights"]),
-        0
-      );
-      
-      return {
-        habit,
-        impact: Math.round((optimizedTotal - currentTotal) / 4), // Average impact
-      };
-    }).sort((a, b) => a.impact - b.impact); // Sort by biggest reduction
-  }, [habitValues, riskScores]);
+  const handleAnswerChange = (diseaseKey: string, questionIndex: number, value: string) => {
+    setAnswers((prev) => {
+      const newAnswers = { ...prev };
+      newAnswers[diseaseKey] = [...prev[diseaseKey]];
+      newAnswers[diseaseKey][questionIndex] = value;
+      return newAnswers;
+    });
+  };
 
-  // Chart data
-  const chartData = riskScores.map((r) => ({
-    name: r.disease.split(" ")[0],
-    baseline: r.baseline,
-    simulated: r.simulated,
-    color: r.color,
-  }));
+  const calculateRisk = (diseaseKey: string): number => {
+    const diseaseAnswers = answers[diseaseKey];
+    const disease = diseases[diseaseKey as keyof typeof diseases];
+    let totalRisk = 0;
+    let answeredQuestions = 0;
 
-  const totalBaselineRisk = Math.round(riskScores.reduce((sum, r) => sum + r.baseline, 0) / 4);
-  const totalSimulatedRisk = Math.round(riskScores.reduce((sum, r) => sum + r.simulated, 0) / 4);
-  const riskChange = totalSimulatedRisk - totalBaselineRisk;
+    diseaseAnswers.forEach((answer, index) => {
+      if (answer) {
+        answeredQuestions++;
+        const options = disease.questions[index].options;
+        const optionIndex = options.indexOf(answer);
+        const riskScore = ((options.length - 1 - optionIndex) / (options.length - 1)) * 100;
+        totalRisk += riskScore;
+      }
+    });
+
+    if (answeredQuestions === 0) return currentRisks[diseaseKey as keyof typeof currentRisks];
+    return Math.round(totalRisk / answeredQuestions);
+  };
+
+  const analyzeRisk = () => {
+    const newRisks = {
+      heart: calculateRisk("heart"),
+      lung: calculateRisk("lung"),
+      diabetes: calculateRisk("diabetes"),
+      pcod: calculateRisk("pcod"),
+      thyroid: calculateRisk("thyroid"),
+    };
+    setSimulatedRisks(newRisks);
+    setHasAnalyzed(true);
+  };
+
+  const getRiskColor = (risk: number) => {
+    if (risk >= 70) return "text-red-400";
+    if (risk >= 40) return "text-yellow-400";
+    return "text-green-400";
+  };
+
+  const getRiskBgColor = (risk: number) => {
+    if (risk >= 70) return "bg-red-500";
+    if (risk >= 40) return "bg-yellow-500";
+    return "bg-green-500";
+  };
+
+  const getRiskLabel = (risk: number) => {
+    if (risk >= 70) return "High Risk";
+    if (risk >= 40) return "Moderate Risk";
+    if (risk > 0) return "Low Risk";
+    return "Not Assessed";
+  };
+
+  const getDifferenceInfo = (current: number, simulated: number) => {
+    const diff = simulated - current;
+    if (diff < 0) {
+      return { value: diff, color: "text-green-400", bgColor: "bg-green-500/20", icon: TrendingDown, label: "Improved" };
+    } else if (diff > 0) {
+      return { value: `+${diff}`, color: "text-red-400", bgColor: "bg-red-500/20", icon: TrendingUp, label: "Increased" };
+    }
+    return { value: 0, color: "text-slate-400", bgColor: "bg-slate-500/20", icon: Minus, label: "No Change" };
+  };
 
   return (
-    <div className="min-h-screen bg-[#030712]">
-      <Header title="LIFESTYLE SIMULATOR" subtitle="What-If Health Analysis" />
+    <div className="min-h-screen bg-[#0B1220]">
+      {/* Header */}
+      <div className="bg-[#0f172a] border-b border-white/5">
+        <div className="max-w-7xl mx-auto px-6 py-4">
+          <div className="flex justify-between items-center">
+            <div className="flex items-center gap-4">
+              <Link href="/" className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors">
+                <ArrowLeft className="w-5 h-5" />
+                <span className="text-sm font-medium">Back to Dashboard</span>
+              </Link>
+            </div>
+            <div className="flex items-center gap-4">
+              {username && (
+                <span className="text-sm text-slate-400">
+                  Welcome, <span className="text-cyan-400 font-medium">{username}</span>
+                </span>
+              )}
+              <button
+                onClick={handleLogout}
+                className="flex items-center gap-2 px-4 py-2 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400 hover:bg-red-500/20 transition-all text-sm font-medium"
+              >
+                <LogOut className="w-4 h-4" />
+                Logout
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
 
       <main className="p-6 lg:p-10">
-        <div className="max-w-[1800px] mx-auto">
-          {/* Top Stats */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-            <PerformanceAwareMotion
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 border border-white/5 rounded-2xl p-6"
-            >
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 rounded-xl bg-cyan-500/10 flex items-center justify-center">
-                  <Target className="w-5 h-5 text-cyan-400" />
-                </div>
-                <div>
-                  <p className="text-slate-500 text-xs font-bold uppercase tracking-widest">Current Risk</p>
-                  <p className="text-3xl font-bold text-white">{totalBaselineRisk}%</p>
-                </div>
-              </div>
-              <p className="text-slate-500 text-xs">Based on your current lifestyle habits</p>
-            </PerformanceAwareMotion>
-
-            <PerformanceAwareMotion
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.1 }}
-              className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 border border-white/5 rounded-2xl p-6"
-            >
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 rounded-xl bg-green-500/10 flex items-center justify-center">
-                  <Sparkles className="w-5 h-5 text-green-400" />
-                </div>
-                <div>
-                  <p className="text-slate-500 text-xs font-bold uppercase tracking-widest">Simulated Risk</p>
-                  <p className="text-3xl font-bold text-white">{totalSimulatedRisk}%</p>
-                </div>
-              </div>
-              <p className="text-slate-500 text-xs">After applying lifestyle changes</p>
-            </PerformanceAwareMotion>
-
-            <PerformanceAwareMotion
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2 }}
-              className={`bg-gradient-to-br ${
-                riskChange <= 0 ? "from-green-900/20 to-green-950/20 border-green-500/20" : "from-red-900/20 to-red-950/20 border-red-500/20"
-              } border rounded-2xl p-6`}
-            >
-              <div className="flex items-center gap-3 mb-4">
-                <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
-                  riskChange <= 0 ? "bg-green-500/10" : "bg-red-500/10"
-                }`}>
-                  {riskChange <= 0 ? (
-                    <TrendingDown className="w-5 h-5 text-green-400" />
-                  ) : (
-                    <TrendingUp className="w-5 h-5 text-red-400" />
-                  )}
-                </div>
-                <div>
-                  <p className="text-slate-500 text-xs font-bold uppercase tracking-widest">Risk Change</p>
-                  <p className={`text-3xl font-bold ${riskChange <= 0 ? "text-green-400" : "text-red-400"}`}>
-                    {riskChange > 0 ? "+" : ""}{riskChange}%
-                  </p>
-                </div>
-              </div>
-              <p className="text-slate-500 text-xs">
-                {riskChange <= 0 ? "Great! Your changes reduce health risks" : "These changes may increase risks"}
-              </p>
-            </PerformanceAwareMotion>
+        <div className="max-w-7xl mx-auto">
+          {/* Title */}
+          <div className="mb-8">
+            <h1 className="text-3xl font-bold text-white mb-2">Lifestyle Simulator</h1>
+            <p className="text-slate-400">Adjust your lifestyle habits to see how they affect your health risk</p>
           </div>
 
-          <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
-            {/* Habit Controls */}
-            <div className="xl:col-span-1 space-y-4">
-              <div className="bg-slate-800/30 border border-white/5 rounded-2xl p-6">
-                <h3 className="text-white font-bold text-sm uppercase tracking-widest mb-6 flex items-center gap-2">
-                  <Zap className="w-4 h-4 text-cyan-400" />
-                  Adjust Lifestyle Habits
-                </h3>
-                
-                <div className="space-y-6">
-                  {habits.map((habit) => {
-                    const Icon = habit.icon;
-                    const currentOption = habit.options.find((o) => o.value === simulatedValues[habit.id]);
-                    
+          {/* Risk Comparison Summary */}
+          <div className="bg-[#0f172a] border border-white/5 rounded-2xl p-6 lg:p-8 mb-8">
+            <div className="flex items-center gap-3 mb-6">
+              <BarChart3 className="w-6 h-6 text-cyan-400" />
+              <h2 className="text-2xl font-bold text-white">Risk Comparison Summary</h2>
+            </div>
+            <p className="text-slate-400 mb-6">Compare your current risk with simulated risk based on lifestyle changes</p>
+
+            {/* Risk Comparison Table */}
+            <div className="overflow-x-auto mb-8">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-white/10">
+                    <th className="text-left py-4 px-4 text-sm font-bold text-slate-300 uppercase tracking-wider">Disease</th>
+                    <th className="text-center py-4 px-4 text-sm font-bold text-slate-300 uppercase tracking-wider">Current Risk</th>
+                    <th className="text-center py-4 px-4 text-sm font-bold text-slate-300 uppercase tracking-wider">Simulated Risk</th>
+                    <th className="text-center py-4 px-4 text-sm font-bold text-slate-300 uppercase tracking-wider">Risk Difference</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {Object.entries(diseases).map(([key, disease]) => {
+                    const Icon = disease.icon;
+                    const current = currentRisks[key as keyof typeof currentRisks];
+                    const simulated = hasAnalyzed ? simulatedRisks[key as keyof typeof simulatedRisks] : 0;
+                    const diffInfo = getDifferenceInfo(current, simulated);
+                    const DiffIcon = diffInfo.icon;
+
                     return (
-                      <div key={habit.id} className="space-y-3">
-                        <div className="flex items-center justify-between">
+                      <tr key={key} className="border-b border-white/5 hover:bg-white/5 transition-colors">
+                        <td className="py-4 px-4">
                           <div className="flex items-center gap-3">
-                            <Icon className="w-4 h-4 text-slate-400" />
-                            <span className="text-white text-sm font-medium">{habit.name}</span>
+                            <div className={`w-10 h-10 rounded-lg ${disease.bgColor} flex items-center justify-center`}>
+                              <Icon className={`w-5 h-5 ${disease.color}`} />
+                            </div>
+                            <span className="font-semibold text-white">{disease.name}</span>
                           </div>
-                          <span className="text-cyan-400 text-xs font-bold">
-                            {currentOption?.label || "Select"}
-                          </span>
-                        </div>
-                        
-                        <div className="grid grid-cols-5 gap-1">
-                          {habit.options.map((option) => (
-                            <button
-                              key={option.value}
-                              onClick={() => {
-                                setSimulatedValues((prev) => ({
-                                  ...prev,
-                                  [habit.id]: option.value,
-                                }));
-                                setActiveHabit(habit.id);
-                              }}
-                              className={`px-2 py-1.5 rounded text-[10px] font-medium transition-all ${
-                                simulatedValues[habit.id] === option.value
-                                  ? "bg-cyan-500 text-white"
-                                  : habitValues[habit.id] === option.value
-                                  ? "bg-slate-700 text-slate-300 border border-cyan-500/30"
-                                  : "bg-slate-800/50 text-slate-500 hover:bg-slate-700/50 hover:text-slate-300"
-                              }`}
-                            >
-                              {option.label.split(" ")[0]}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
+                        </td>
+                        <td className="py-4 px-4 text-center">
+                          <span className={`text-2xl font-bold ${getRiskColor(current)}`}>{current}%</span>
+                        </td>
+                        <td className="py-4 px-4 text-center">
+                          {hasAnalyzed ? (
+                            <span className={`text-2xl font-bold ${getRiskColor(simulated)}`}>{simulated}%</span>
+                          ) : (
+                            <span className="text-slate-500 text-lg">--</span>
+                          )}
+                        </td>
+                        <td className="py-4 px-4 text-center">
+                          {hasAnalyzed ? (
+                            <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full ${diffInfo.bgColor}`}>
+                              <DiffIcon className={`w-4 h-4 ${diffInfo.color}`} />
+                              <span className={`font-bold ${diffInfo.color}`}>{diffInfo.value}%</span>
+                            </div>
+                          ) : (
+                            <span className="text-slate-500 text-lg">--</span>
+                          )}
+                        </td>
+                      </tr>
                     );
                   })}
-                </div>
-
-                <button
-                  onClick={() => setSimulatedValues(habitValues)}
-                  className="mt-6 w-full py-3 bg-slate-700/50 hover:bg-slate-700 text-slate-300 rounded-xl text-sm font-medium transition-all"
-                >
-                  Reset to Current
-                </button>
-              </div>
+                </tbody>
+              </table>
             </div>
 
-            {/* Risk Comparison Chart */}
-            <div className="xl:col-span-1">
-              <div className="bg-slate-800/30 border border-white/5 rounded-2xl p-6 h-full">
-                <h3 className="text-white font-bold text-sm uppercase tracking-widest mb-6 flex items-center gap-2">
-                  <Heart className="w-4 h-4 text-red-400" />
-                  Risk Comparison
-                </h3>
+            {/* Bar Graph Comparison */}
+            <div className="mt-8">
+              <h3 className="text-lg font-bold text-white mb-6">Risk Comparison Chart</h3>
+              <div className="space-y-6">
+                {Object.entries(diseases).map(([key, disease]) => {
+                  const Icon = disease.icon;
+                  const current = currentRisks[key as keyof typeof currentRisks];
+                  const simulated = hasAnalyzed ? simulatedRisks[key as keyof typeof simulatedRisks] : 0;
 
-                <div className="h-72">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={chartData} barGap={8}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
-                      <XAxis dataKey="name" stroke="#64748b" fontSize={11} tickLine={false} axisLine={false} />
-                      <YAxis stroke="#64748b" fontSize={11} tickLine={false} axisLine={false} domain={[0, 80]} />
-                      <Tooltip
-                        contentStyle={{
-                          backgroundColor: "#0f172a",
-                          border: "1px solid rgba(255,255,255,0.1)",
-                          borderRadius: "12px",
-                          fontSize: 12,
-                        }}
-                      />
-                      <Bar dataKey="baseline" name="Current" radius={[4, 4, 0, 0]} fill="#475569" />
-                      <Bar dataKey="simulated" name="Simulated" radius={[4, 4, 0, 0]}>
-                        {chartData.map((entry, index) => (
-                          <Cell
-                            key={`cell-${index}`}
-                            fill={entry.simulated < entry.baseline ? "#22c55e" : entry.simulated > entry.baseline ? "#ef4444" : "#22d3ee"}
-                          />
-                        ))}
-                      </Bar>
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-
-                {/* Risk Cards */}
-                <div className="mt-6 grid grid-cols-2 gap-3">
-                  {riskScores.map((risk) => {
-                    const Icon = risk.icon;
-                    const change = risk.simulated - risk.baseline;
-                    return (
-                      <div
-                        key={risk.disease}
-                        className="bg-slate-900/50 rounded-xl p-3 border border-white/5"
-                      >
-                        <div className="flex items-center gap-2 mb-2">
-                          <Icon className="w-4 h-4" style={{ color: risk.color }} />
-                          <span className="text-slate-400 text-xs">{risk.disease}</span>
-                        </div>
-                        <div className="flex items-end justify-between">
-                          <div>
-                            <span className="text-slate-500 text-xs line-through mr-2">{risk.baseline}%</span>
-                            <span className="text-white font-bold">{risk.simulated}%</span>
-                          </div>
-                          <span className={`text-xs font-bold ${change <= 0 ? "text-green-400" : "text-red-400"}`}>
-                            {change > 0 ? "+" : ""}{change}%
-                          </span>
+                  return (
+                    <div key={key} className="space-y-2">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Icon className={`w-4 h-4 ${disease.color}`} />
+                        <span className="text-sm font-semibold text-white">{disease.name}</span>
+                      </div>
+                      
+                      {/* Current Risk Bar */}
+                      <div className="flex items-center gap-3">
+                        <span className="text-xs text-slate-400 w-20">Current</span>
+                        <div className="flex-1 bg-[#1e293b] rounded-full h-6 relative overflow-hidden">
+                          <motion.div
+                            initial={{ width: 0 }}
+                            animate={{ width: `${current}%` }}
+                            transition={{ duration: 0.8, ease: "easeOut" }}
+                            className={`${disease.barColor} h-6 rounded-full flex items-center justify-end pr-3`}
+                          >
+                            <span className="text-xs font-bold text-white">{current}%</span>
+                          </motion.div>
                         </div>
                       </div>
-                    );
-                  })}
+
+                      {/* Simulated Risk Bar */}
+                      <div className="flex items-center gap-3">
+                        <span className="text-xs text-slate-400 w-20">Simulated</span>
+                        <div className="flex-1 bg-[#1e293b] rounded-full h-6 relative overflow-hidden">
+                          <motion.div
+                            initial={{ width: 0 }}
+                            animate={{ width: hasAnalyzed ? `${simulated}%` : "0%" }}
+                            transition={{ duration: 0.8, ease: "easeOut" }}
+                            className={`${hasAnalyzed ? disease.barColor : "bg-slate-600"} h-6 rounded-full opacity-60 flex items-center justify-end pr-3`}
+                          >
+                            {hasAnalyzed && <span className="text-xs font-bold text-white">{simulated}%</span>}
+                          </motion.div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Legend */}
+              <div className="flex justify-center gap-8 mt-6 pt-6 border-t border-white/5">
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 bg-cyan-500 rounded"></div>
+                  <span className="text-sm text-slate-400">Current Risk</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 bg-cyan-500 opacity-60 rounded"></div>
+                  <span className="text-sm text-slate-400">Simulated Risk</span>
                 </div>
               </div>
             </div>
+          </div>
 
-            {/* Habit Priority Engine */}
-            <div className="xl:col-span-1">
-              <div className="bg-slate-800/30 border border-white/5 rounded-2xl p-6 h-full">
-                <h3 className="text-white font-bold text-sm uppercase tracking-widest mb-2 flex items-center gap-2">
-                  <Zap className="w-4 h-4 text-yellow-400" />
-                  Habit Priority Engine
-                </h3>
-                <p className="text-slate-500 text-xs mb-6">
-                  Fix these habits first for maximum health benefit
-                </p>
+          {/* Adjust Lifestyle Habits */}
+          <div className="bg-[#0f172a] border border-white/5 rounded-2xl p-6 lg:p-8">
+            <h2 className="text-2xl font-bold text-white mb-2">Adjust Lifestyle Habits</h2>
+            <p className="text-slate-400 mb-8">Change the options below and click "Analyze Risk" to see how lifestyle changes affect your risk</p>
 
-                <div className="space-y-3">
-                  {habitPriorities.slice(0, 5).map((item, index) => (
-                    <HabitPriorityCard
-                      key={item.habit.id}
-                      habit={item.habit}
-                      impact={item.impact}
-                      rank={index + 1}
-                    />
-                  ))}
-                </div>
+            <div className="space-y-10">
+              {Object.entries(diseases).map(([key, disease]) => {
+                const Icon = disease.icon;
+                const current = currentRisks[key as keyof typeof currentRisks];
+                const simulated = hasAnalyzed ? simulatedRisks[key as keyof typeof simulatedRisks] : 0;
 
-                <div className="mt-6 p-4 bg-gradient-to-r from-cyan-500/10 to-teal-500/10 rounded-xl border border-cyan-500/20">
-                  <div className="flex items-start gap-3">
-                    <Sparkles className="w-5 h-5 text-cyan-400 mt-0.5" />
-                    <div>
-                      <p className="text-white text-sm font-medium mb-1">Top Recommendation</p>
-                      <p className="text-slate-400 text-xs">
-                        {habitPriorities[0] && (
+                return (
+                  <motion.div
+                    key={key}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className={`${disease.bgColor} rounded-2xl p-6 border border-white/5`}
+                  >
+                    {/* Disease Header */}
+                    <div className="flex items-center justify-between mb-6">
+                      <div className="flex items-center gap-3">
+                        <div className="w-12 h-12 rounded-xl bg-[#0B1220] flex items-center justify-center">
+                          <Icon className={`w-6 h-6 ${disease.color}`} />
+                        </div>
+                        <h3 className="text-xl font-bold text-white">{disease.name}</h3>
+                      </div>
+                      
+                      {/* Risk Summary */}
+                      <div className="flex items-center gap-6">
+                        <div className="text-center">
+                          <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Current</p>
+                          <p className={`text-2xl font-bold ${getRiskColor(current)}`}>{current}%</p>
+                        </div>
+                        {hasAnalyzed && (
                           <>
-                            Optimizing <span className="text-cyan-400 font-medium">{habitPriorities[0].habit.name}</span> could 
-                            reduce your overall risk by <span className="text-green-400 font-medium">{Math.abs(habitPriorities[0].impact)}%</span>
+                            <div className="text-2xl text-slate-600">→</div>
+                            <div className="text-center">
+                              <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Simulated</p>
+                              <p className={`text-2xl font-bold ${getRiskColor(simulated)}`}>{simulated}%</p>
+                            </div>
                           </>
                         )}
-                      </p>
+                      </div>
                     </div>
-                  </div>
-                </div>
-              </div>
+
+                    {/* Questions Grid */}
+                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 mb-4">
+                      {disease.questions.map((q, qIndex) => (
+                        <div key={qIndex} className="bg-[#0B1220] p-4 rounded-xl">
+                          <label className="block text-sm font-bold text-white mb-2">{q.question}</label>
+                          <select
+                            className="w-full bg-slate-900/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-cyan-500/30 focus:ring-1 focus:ring-cyan-500/20 transition-all"
+                            value={answers[key][qIndex]}
+                            onChange={(e) => handleAnswerChange(key, qIndex, e.target.value)}
+                          >
+                            <option value="">Select an option</option>
+                            {q.options.map((option, oIndex) => (
+                              <option key={oIndex} value={option}>
+                                {option}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Risk Progress Bar */}
+                    <div className="h-2 bg-[#0B1220] rounded-full overflow-hidden">
+                      <div
+                        className={`h-full transition-all duration-500 ${getRiskBgColor(hasAnalyzed ? simulated : current)}`}
+                        style={{ width: `${hasAnalyzed ? simulated : current}%` }}
+                      />
+                    </div>
+                  </motion.div>
+                );
+              })}
+            </div>
+
+            {/* Analyze Risk Button */}
+            <div className="flex justify-center mt-10">
+              <button
+                onClick={analyzeRisk}
+                className="px-12 py-4 bg-gradient-to-r from-cyan-500 to-teal-500 hover:from-cyan-400 hover:to-teal-400 text-[#0B1220] font-bold text-lg rounded-full transition-all duration-200 shadow-lg shadow-cyan-500/25 hover:shadow-cyan-500/40"
+              >
+                Analyze Risk
+              </button>
             </div>
           </div>
         </div>

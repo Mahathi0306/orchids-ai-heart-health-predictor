@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import {
   Heart,
@@ -14,8 +15,9 @@ import {
   ChevronRight,
 } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
-function Sidebar() {
+function Sidebar({ username, onLogout }: { username: string; onLogout: () => void }) {
   const navItems = [
     { icon: Activity, label: "Dashboard", href: "/dashboard" },
     { icon: History, label: "History", href: "/history" },
@@ -62,11 +64,11 @@ function Sidebar() {
             <User className="w-5 h-5 text-white" />
           </div>
           <div className="flex-1">
-            <p className="text-sm font-medium text-white">John Doe</p>
-            <p className="text-xs text-[#64748B]">john@example.com</p>
+            <p className="text-sm font-medium text-white">{username || "User"}</p>
+            <p className="text-xs text-[#64748B]">Health Profile</p>
           </div>
-          <button className="p-2 hover:bg-[#1E293B] rounded-lg transition-colors">
-            <LogOut className="w-4 h-4 text-[#64748B]" />
+          <button onClick={onLogout} className="p-2 hover:bg-red-500/10 rounded-lg transition-colors">
+            <LogOut className="w-4 h-4 text-red-400" />
           </button>
         </div>
       </div>
@@ -137,6 +139,22 @@ function ActivityRing({ percent }: { percent: number }) {
 }
 
 export default function RecommendationsPage() {
+  const router = useRouter();
+  const [username, setUsername] = useState("");
+
+  useEffect(() => {
+    const storedUsername = localStorage.getItem("username");
+    if (storedUsername) {
+      setUsername(storedUsername);
+    }
+  }, []);
+
+  const handleLogout = () => {
+    localStorage.removeItem("username");
+    localStorage.removeItem("userEmail");
+    router.push("/login");
+  };
+
   return (
     <div className="min-h-screen bg-[#0F172A] relative overflow-hidden">
       <div className="absolute inset-0 vignette pointer-events-none z-10" />
@@ -145,7 +163,7 @@ export default function RecommendationsPage() {
       <div className="absolute top-[-10%] right-[-5%] w-[400px] h-[400px] bg-cyan-500/5 rounded-full blur-[100px]" />
       <div className="absolute bottom-[10%] left-[20%] w-[300px] h-[300px] bg-teal-500/5 rounded-full blur-[80px]" />
 
-      <Sidebar />
+      <Sidebar username={username} onLogout={handleLogout} />
 
       <main className="ml-64 p-8 relative z-10">
         <div className="max-w-4xl mx-auto">

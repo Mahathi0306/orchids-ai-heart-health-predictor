@@ -1,6 +1,6 @@
 "use client";
 
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import {
   ChevronRight,
@@ -13,6 +13,7 @@ import {
   Target,
   Sparkles,
   ArrowRight,
+  LogOut,
 } from "lucide-react";
 import Link from "next/link";
 import { Suspense, useEffect, useState } from "react";
@@ -114,13 +115,25 @@ function DataPanel({
 
 function ResultsContent() {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const scoreParam = searchParams.get("score");
   const score = scoreParam ? parseInt(scoreParam) : 33;
   const [reportId, setReportId] = useState("RPT-000000");
+  const [username, setUsername] = useState("");
 
   useEffect(() => {
     setReportId(`RPT-${Math.floor(Math.random() * 1000000).toString().padStart(6, '0')}`);
+    const storedUsername = localStorage.getItem("username");
+    if (storedUsername) {
+      setUsername(storedUsername);
+    }
   }, []);
+
+  const handleLogout = () => {
+    localStorage.removeItem("username");
+    localStorage.removeItem("userEmail");
+    router.push("/login");
+  };
 
   const getRiskLevel = () => {
     if (score < 30) return { level: "Low", color: "text-green-400" };
@@ -132,7 +145,30 @@ function ResultsContent() {
 
   return (
     <div className="min-h-screen">
-      <Header title="DIAGNOSTIC REPORT" subtitle="Risk Analysis Verification" />
+      <div className="bg-[#0f172a] border-b border-white/5">
+        <div className="max-w-7xl mx-auto px-6 py-4">
+          <div className="flex justify-between items-center">
+            <div>
+              <h1 className="text-xl font-bold text-white uppercase tracking-widest">DIAGNOSTIC REPORT</h1>
+              <p className="text-xs text-slate-500 uppercase tracking-widest">Risk Analysis Verification</p>
+            </div>
+            <div className="flex items-center gap-4">
+              {username && (
+                <span className="text-sm text-slate-400">
+                  Welcome, <span className="text-cyan-400 font-medium">{username}</span>
+                </span>
+              )}
+              <button
+                onClick={handleLogout}
+                className="flex items-center gap-2 px-4 py-2 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400 hover:bg-red-500/20 transition-all text-sm font-medium"
+              >
+                <LogOut className="w-4 h-4" />
+                Logout
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
       
       <main className="p-10">
         <div className="max-w-[1600px] mx-auto">

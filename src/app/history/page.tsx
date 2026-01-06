@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import {
   Heart,
@@ -14,8 +15,10 @@ import {
   TrendingDown,
   TrendingUp,
   Calendar,
+  LogOut,
 } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   LineChart,
   Line,
@@ -143,6 +146,22 @@ function DataPanel({
 }
 
 export default function HistoryPage() {
+  const router = useRouter();
+  const [username, setUsername] = useState("");
+
+  useEffect(() => {
+    const storedUsername = localStorage.getItem("username");
+    if (storedUsername) {
+      setUsername(storedUsername);
+    }
+  }, []);
+
+  const handleLogout = () => {
+    localStorage.removeItem("username");
+    localStorage.removeItem("userEmail");
+    router.push("/login");
+  };
+
   return (
     <div className="min-h-screen bg-[#0a0f1a]">
       <Sidebar />
@@ -156,7 +175,7 @@ export default function HistoryPage() {
         >
           <div>
             <h1 className="text-white font-semibold" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
-              PATIENT: JOHN DOE <span className="text-cyan-400 ml-1">+</span>
+              {username ? `PATIENT: ${username.toUpperCase()}` : "PATIENT: USER"} <span className="text-cyan-400 ml-1">+</span>
             </h1>
             <p className="text-slate-500 text-xs">Historical analytics</p>
           </div>
@@ -170,7 +189,13 @@ export default function HistoryPage() {
                 className="w-48 h-9 pl-9 pr-4 bg-[#111827] border border-cyan-500/10 rounded-lg text-sm text-white placeholder:text-slate-600 focus:outline-none focus:border-cyan-500/30"
               />
             </div>
-            <p className="text-slate-500 text-sm">Case number: <span className="text-white">00027689</span></p>
+            <button
+              onClick={handleLogout}
+              className="flex items-center gap-2 px-4 py-2 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400 hover:bg-red-500/20 transition-all text-sm font-medium"
+            >
+              <LogOut className="w-4 h-4" />
+              Logout
+            </button>
           </div>
         </motion.header>
         

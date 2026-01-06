@@ -8,6 +8,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 
 export default function LoginPage() {
+  const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -20,6 +21,11 @@ export default function LoginPage() {
     e.preventDefault();
     setError("");
     setIsLoading(true);
+
+    // Store username in localStorage
+    if (username) {
+      localStorage.setItem('username', username);
+    }
 
     const result = await login(email, password);
 
@@ -123,6 +129,23 @@ export default function LoginPage() {
                   {error}
                 </motion.div>
               )}
+
+              <div>
+                <label className="block text-sm font-medium text-slate-400 mb-2">
+                  Username
+                </label>
+                <div className="relative">
+                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
+                  <input
+                    type="text"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    placeholder="Your username"
+                    className="w-full bg-slate-900/50 border border-white/5 rounded-xl pl-12 pr-4 py-3.5 text-white placeholder:text-slate-600 focus:outline-none focus:border-cyan-500/30 focus:ring-1 focus:ring-cyan-500/20 transition-all"
+                    required
+                  />
+                </div>
+              </div>
 
               <div>
                 <label className="block text-sm font-medium text-slate-400 mb-2">

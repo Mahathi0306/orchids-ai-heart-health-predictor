@@ -10,65 +10,59 @@ import {
   Bone,
   ChevronRight,
   TrendingUp,
+  LogOut,
 } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Header } from "@/components/Navigation";
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
+import { useState, useEffect } from "react";
 
-const diseases = [
+const defaultDiseases = [
   {
     id: "heart",
     name: "Heart Disease",
     icon: Heart,
     status: "Active",
     lastUpdated: "2 days ago",
-    riskLevel: 33,
+    riskLevel: 45,
     trend: "improving",
   },
   {
-    id: "diabetes",
-    name: "Diabetes Risk",
-    icon: Droplets,
-    status: "Not Assessed",
-    lastUpdated: null,
-    riskLevel: null,
-    trend: null,
-  },
-  {
-    id: "stroke",
-    name: "Stroke Risk",
+    id: "lung",
+    name: "Lung Disease",
     icon: Brain,
-    status: "Not Assessed",
-    lastUpdated: null,
-    riskLevel: null,
-    trend: null,
-  },
-  {
-    id: "hypertension",
-    name: "Hypertension",
-    icon: Activity,
-    status: "Updated",
-    lastUpdated: "1 week ago",
-    riskLevel: 28,
+    status: "Active",
+    lastUpdated: "3 days ago",
+    riskLevel: 32,
     trend: "stable",
   },
   {
-    id: "kidney",
-    name: "Kidney Disease",
-    icon: Stethoscope,
-    status: "Not Assessed",
-    lastUpdated: null,
-    riskLevel: null,
-    trend: null,
+    id: "thyroid",
+    name: "Thyroid",
+    icon: Activity,
+    status: "Active",
+    lastUpdated: "1 week ago",
+    riskLevel: 36,
+    trend: "improving",
   },
   {
-    id: "osteoporosis",
-    name: "Bone Density",
-    icon: Bone,
-    status: "Not Assessed",
-    lastUpdated: null,
-    riskLevel: null,
-    trend: null,
+    id: "pcod",
+    name: "PCOD/PCOS",
+    icon: Stethoscope,
+    status: "Active",
+    lastUpdated: "5 days ago",
+    riskLevel: 41,
+    trend: "stable",
+  },
+  {
+    id: "diabetes",
+    name: "Type 2 Diabetes",
+    icon: Droplets,
+    status: "Active",
+    lastUpdated: "4 days ago",
+    riskLevel: 58,
+    trend: "improving",
   },
 ];
 
@@ -94,7 +88,7 @@ function MiniSparkline({ trend }: { trend: string | null }) {
   );
 }
 
-function DiseasePanel({ disease }: { disease: typeof diseases[0] }) {
+function DiseasePanel({ disease }: { disease: typeof defaultDiseases[0] }) {
   const Icon = disease.icon;
   const isAssessed = disease.riskLevel !== null;
   
@@ -143,7 +137,7 @@ function DiseasePanel({ disease }: { disease: typeof diseases[0] }) {
         <div className="flex items-center justify-between mt-2">
           <p className="text-slate-500 text-xs font-medium">Insufficient data for analysis</p>
           <Link
-            href="/assessment"
+            href={`/assessment?disease=${disease.id}`}
             className="text-[10px] font-bold uppercase tracking-widest text-cyan-400 hover:text-cyan-300 transition-colors flex items-center gap-1 bg-cyan-500/5 px-3 py-1.5 rounded-lg border border-cyan-500/10"
           >
             Start Assessment
@@ -154,109 +148,105 @@ function DiseasePanel({ disease }: { disease: typeof diseases[0] }) {
   );
 }
 
-function QuickStatsPanel() {
-  return (
-    <div className="bg-[#0f172a] border border-white/5 rounded-2xl p-6 col-span-full xl:col-span-2">
-      <div className="flex items-center justify-between mb-8">
-        <div>
-          <h3 className="text-white font-bold text-sm uppercase tracking-widest">Statistical Risk Distribution</h3>
-          <p className="text-slate-500 text-xs mt-1">Aggregated data from all active monitors</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
-          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Live Monitoring</span>
-        </div>
-      </div>
-      
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-6">
-        {[
-          { label: "Assessed Conditions", value: "2", sub: "Out of 6", color: "text-white" },
-          { label: "Mean Risk Index", value: "31%", sub: "-4% since last week", color: "text-cyan-400" },
-          { label: "Pending Analysis", value: "4", sub: "Requires input", color: "text-slate-400" },
-          { label: "Recovery Velocity", value: "+12%", sub: "Above average", color: "text-green-400", trend: true },
-        ].map((stat, i) => (
-          <div key={i} className="space-y-1">
-            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{stat.label}</p>
-            <div className="flex items-baseline gap-2">
-              <p className={`text-2xl font-bold tracking-tighter ${stat.color}`} style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
-                {stat.value}
-              </p>
-              {stat.trend && <TrendingUp className="w-3 h-3 text-green-400" />}
-            </div>
-            <p className="text-[10px] text-slate-600 font-medium">{stat.sub}</p>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
 export default function ClinicalDashboard() {
   const prefersReducedMotion = useReducedMotion();
+  const router = useRouter();
+  const [username, setUsername] = useState('');
+  const [diseases, setDiseases] = useState(defaultDiseases);
+  
+  useEffect(() => {
+    // Get username from localStorage
+    if (typeof window !== 'undefined') {
+      const storedUsername = localStorage.getItem('username');
+      if (storedUsername) {
+        setUsername(storedUsername);
+      }
+      
+      // Load saved risk levels from localStorage or use defaults
+      const savedRisks = localStorage.getItem('diseaseRisks');
+      if (savedRisks) {
+        const parsedRisks = JSON.parse(savedRisks);
+        const updatedDiseases = defaultDiseases.map(disease => ({
+          ...disease,
+          riskLevel: parsedRisks[disease.id] ?? disease.riskLevel,
+          status: parsedRisks[disease.id] !== undefined ? "Active" : disease.status
+        }));
+        setDiseases(updatedDiseases);
+      } else {
+        // Save default risks to localStorage
+        const defaultRisks = {
+          heart: 45,
+          lung: 32,
+          thyroid: 36,
+          pcod: 41,
+          diabetes: 58
+        };
+        localStorage.setItem('diseaseRisks', JSON.stringify(defaultRisks));
+      }
+    }
+  }, []);
+
+  const handleLogout = () => {
+    localStorage.removeItem('username');
+    localStorage.removeItem('userEmail');
+    router.push('/login');
+  };
   
   return (
     <div className="min-h-screen">
-      <Header title="HEALTH OVERVIEW" subtitle="Diagnostic Dashboard" />
+      <div className="bg-[#0f172a] border-b border-white/5">
+        <div className="max-w-7xl mx-auto px-6 py-4">
+          <div className="flex justify-between items-center">
+            <div>
+              <h1 className="text-xl font-bold text-white uppercase tracking-widest">HEALTH OVERVIEW</h1>
+              <p className="text-xs text-slate-500 uppercase tracking-widest">Diagnostic Dashboard</p>
+            </div>
+            <div className="flex items-center gap-4">
+              {username && (
+                <span className="text-sm text-slate-400">
+                  Welcome, <span className="text-cyan-400 font-medium">{username}</span>
+                </span>
+              )}
+              <button
+                onClick={handleLogout}
+                className="flex items-center gap-2 px-4 py-2 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400 hover:bg-red-500/20 transition-all text-sm font-medium"
+              >
+                <LogOut className="w-4 h-4" />
+                Logout
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
       
       <main className="p-10">
         <div className="max-w-[1600px] mx-auto">
-          {prefersReducedMotion ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-              {diseases.map((disease) => (
-                <DiseasePanel key={disease.id} disease={disease} />
-              ))}
-              
-              <QuickStatsPanel />
-              
-              <div className="xl:col-span-1 bg-[#0f172a] border border-white/5 rounded-2xl p-6">
-                <div className="flex items-center justify-between mb-6">
-                  <h3 className="text-white font-bold text-sm uppercase tracking-widest">Recent Logs</h3>
-                  <Link href="/history" className="text-[10px] font-bold text-cyan-400 uppercase tracking-widest hover:underline">
-                    Protocol History
-                  </Link>
-                </div>
-                
-                <div className="space-y-4">
-                  {[
-                    { action: "Cardiovascular profile synchronized", time: "08:42 AM", status: "cyan" },
-                    { action: "Hypertension baseline recalibrated", time: "Yesterday", status: "green" },
-                    { action: "System: New biometric data detected", time: "2 days ago", status: "slate" },
-                  ].map((item, i) => (
-                    <div key={i} className="flex items-center justify-between group">
-                      <div className="flex items-center gap-3">
-                        <div className={`w-1.5 h-1.5 rounded-full ${
-                          item.status === "cyan" ? "bg-cyan-400" : 
-                          item.status === "green" ? "bg-green-400" : "bg-slate-700"
-                        }`} />
-                        <span className="text-xs text-slate-400 group-hover:text-slate-200 transition-colors">{item.action}</span>
-                      </div>
-                      <span className="text-[10px] text-slate-600 font-mono">{item.time}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
+          {/* Welcome Message */}
+          {username && (
+            <div className="mb-8">
+              <h2 className="text-3xl font-bold text-white">Hi, {username}! 👋</h2>
+              <p className="text-slate-400 mt-2">Here's your health overview</p>
             </div>
-          ) : (
-            <motion.div 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.4 }}
-              className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6"
-            >
-              {diseases.map((disease) => (
-                <DiseasePanel key={disease.id} disease={disease} />
-              ))}
+          )}
+          
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.4 }}
+            className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6"
+          >
+            {diseases.map((disease) => (
+              <DiseasePanel key={disease.id} disease={disease} />
+            ))}
+            
+            <div className="xl:col-span-1 bg-[#0f172a] border border-white/5 rounded-2xl p-6">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-white font-bold text-sm uppercase tracking-widest">Recent Logs</h3>
+                <Link href="/history" className="text-[10px] font-bold text-cyan-400 uppercase tracking-widest hover:underline">
+                  Protocol History
+                </Link>
+              </div>
               
-              <QuickStatsPanel />
-              
-              <div className="xl:col-span-1 bg-[#0f172a] border border-white/5 rounded-2xl p-6">
-                <div className="flex items-center justify-between mb-6">
-                  <h3 className="text-white font-bold text-sm uppercase tracking-widest">Recent Logs</h3>
-                  <Link href="/history" className="text-[10px] font-bold text-cyan-400 uppercase tracking-widest hover:underline">
-                    Protocol History
-                  </Link>
-                </div>
-                
               <div className="space-y-4">
                 {[
                   { action: "Cardiovascular profile synchronized", time: "08:42 AM", status: "cyan" },
@@ -277,7 +267,6 @@ export default function ClinicalDashboard() {
               </div>
             </div>
           </motion.div>
-          )}
           
           <footer className="mt-12 flex flex-col md:flex-row items-center justify-between border-t border-white/5 pt-8 gap-4">
             <div className="flex gap-6">
